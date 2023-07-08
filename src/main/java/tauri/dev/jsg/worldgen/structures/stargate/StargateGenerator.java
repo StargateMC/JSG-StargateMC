@@ -83,8 +83,8 @@ public class StargateGenerator {
         WorldServer worldToSpawn = Objects.requireNonNull(pWorld.getMinecraftServer()).getWorld(dimensionToSpawn);
         EnumStructures structure = null;
 
-        int min = JSGConfig.WorldGen.mystPage.minOverworldCoords;
-        int max = JSGConfig.WorldGen.mystPage.maxOverworldCoords;
+        int min = 100;
+        int max = 5000;
 
         int x = ((min + (int) (rand.nextFloat() * max)));
         int z = ((min + (int) (rand.nextFloat() * max)));
