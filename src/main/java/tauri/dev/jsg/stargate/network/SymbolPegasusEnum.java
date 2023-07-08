@@ -128,6 +128,10 @@ public enum SymbolPegasusEnum implements SymbolInterface {
   // ------------------------------------------------------------
   // Static
 
+  public static SymbolPegasusEnum getSymbolForIndex(Integer ID) {
+    return valueOf(ID);
+  }
+
   public static SymbolPegasusEnum getRandomSymbol(Random random) {
     int id = 0;
     do {

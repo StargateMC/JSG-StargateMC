@@ -20,7 +20,20 @@ public enum SymbolTypeEnum implements EnumKeyInterface<Integer> {
     this.iconWidht = iconWidht;
     this.iconHeight = iconHeight;
   }
+  public SymbolInterface getByIndex(int index) {
+    switch (this) {
+      case MILKYWAY:
+        return SymbolMilkyWayEnum.getSymbolForIndex(index);
 
+      case PEGASUS:
+        return SymbolPegasusEnum.getSymbolForIndex(index);
+
+      case UNIVERSE:
+        return SymbolUniverseEnum.getSymbolForIndex(index);
+    }
+
+    return null;
+  }
   public SymbolInterface getRandomSymbol(Random random) {
     switch (this) {
       case MILKYWAY:

@@ -59,7 +59,9 @@ public class StargateNetwork extends WorldSavedData {
             stargateNetworkMap.put(symbolType, new ConcurrentHashMap<>());
         INTERNAL_GATES.init();
     }
-
+    public Map<StargateAddress, StargatePos> getMapFromType(SymbolTypeEnum type) {
+        return stargateNetworkMap.get(type);
+    }
     private Map<StargateAddress, StargatePos> getMapFromAddress(StargateAddress address) {
         return stargateNetworkMap.get(address.getSymbolType());
     }

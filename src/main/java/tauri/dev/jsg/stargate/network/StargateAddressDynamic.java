@@ -29,7 +29,16 @@ public class StargateAddressDynamic extends StargateAddress {
 	
 	// ---------------------------------------------------------------------------------
 	// Address
+	public void removeSymbol(SymbolInterface symbol) {		
+		if (!address.contains(symbol)) {
+			JSG.error("Tried to remove symbol from address which doesnt have it");
+			return;
+		}
 		
+		address.remove(symbol);
+		addressSize -= 1;
+	}
+
 	public void addSymbol(SymbolInterface symbol) {		
 		if (address.size() == 9) {
 			JSG.error("Tried to add symbol to already full address");

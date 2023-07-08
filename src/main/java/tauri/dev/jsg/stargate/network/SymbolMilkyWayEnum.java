@@ -221,7 +221,9 @@ public enum SymbolMilkyWayEnum implements SymbolInterface {
 
     // ------------------------------------------------------------
     // Static
-
+    public static SymbolMilkyWayEnum getSymbolForIndex(Integer ID) {
+        return valueOf(ID);
+    }
     public static SymbolMilkyWayEnum getRandomSymbol(Random random) {
         int id = 0;
         do {

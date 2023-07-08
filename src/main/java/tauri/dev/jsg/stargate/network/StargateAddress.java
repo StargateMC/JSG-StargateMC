@@ -9,7 +9,17 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+
 public class StargateAddress implements INBTSerializable<NBTTagCompound> {
+
+
+	public StargateAddress (List<Integer> list, SymbolTypeEnum symbolType) {
+		this.symbolType = symbolType;
+		int count=0;
+		for (Integer i : list) {
+			address.add(count++, symbolType.getByIndex(i));
+		}
+	}
 
     public StargateAddress(SymbolTypeEnum symbolType) {
 		this.symbolType = symbolType;

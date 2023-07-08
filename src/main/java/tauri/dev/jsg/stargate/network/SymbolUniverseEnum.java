@@ -170,7 +170,9 @@ public enum SymbolUniverseEnum implements SymbolInterface {
 	
 	// ------------------------------------------------------------
 	// Static
-	
+	public static SymbolUniverseEnum getSymbolForIndex(Integer ID) {
+        return valueOf(ID);
+    }
 	public static SymbolUniverseEnum getRandomSymbol(Random random) {		
 		int id;
 		do { 
