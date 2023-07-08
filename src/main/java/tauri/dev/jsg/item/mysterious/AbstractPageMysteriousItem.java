@@ -21,6 +21,10 @@ import tauri.dev.jsg.item.notebook.PageNotebookItem;
 import tauri.dev.jsg.stargate.network.SymbolTypeEnum;
 import tauri.dev.jsg.worldgen.structures.stargate.StargateGenerator;
 import tauri.dev.jsg.worldgen.util.GeneratedStargate;
+import zmaster587.advancedRocketry.stargatemc.ARIntegration;
+import zmaster587.advancedRocketry.stargatemc.Galaxy;
+import zmaster587.advancedRocketry.api.dimension.solar.StellarBody;
+import java.util.Random;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -52,8 +56,11 @@ public abstract class AbstractPageMysteriousItem extends Item {
             sendPlayerMessageAboutGeneration(player, true, false);
             if (JSGConfig.WorldGen.mystPage.pageCooldown > 0)
                 player.getCooldownTracker().setCooldown(this, JSGConfig.WorldGen.mystPage.pageCooldown);
-            GeneratedStargate stargate = StargateGenerator.mystPageGeneration(world, symbolType, dimensionToSpawn, player);
-
+                Galaxy g = null;
+                if (this instanceof PegasusPageMysteriousItem) { g = Galaxy.Pegasus;}
+                if (this instanceof MilkyWayPageMysteriousItem) { g = Galaxy.MilkyWay;}
+                if (this instanceof UniversePageMysteriousItem) { g = Galaxy.Destiny;}
+            GeneratedStargate stargate = StargateGenerator.customGateSpawn(g, true, 10, player);
             if (stargate != null) {
                 givePlayerPage(player, hand, stargate);
                 sendPlayerMessageAboutGeneration(player, false, true);

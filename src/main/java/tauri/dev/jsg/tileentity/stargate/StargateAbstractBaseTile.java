@@ -1,5 +1,15 @@
 package tauri.dev.jsg.tileentity.stargate;
 
+
+
+import com.stargatemc.constants.NpcRace;
+import com.stargatemc.constants.NpcType;
+import com.stargatemc.constants.DevelopmentStage;
+import noppes.npcs.api.entity.ICustomNpc;
+import noppes.npcs.entity.EntityCustomNpc;
+import com.stargatemc.handlers.NpcHandler;
+
+
 import li.cil.oc.api.Network;
 import li.cil.oc.api.machine.Arguments;
 import li.cil.oc.api.machine.Callback;
@@ -75,6 +85,10 @@ import java.util.*;
 import static tauri.dev.jsg.stargate.network.internalgates.StargateAddressesEnum.tryDialInternal;
 import static tauri.dev.jsg.tileentity.stargate.StargateClassicBaseTile.ConfigOptions.ALLOW_INCOMING;
 import static tauri.dev.jsg.util.JSGAdvancementsUtil.tryTriggerRangedAdvancement;
+import zmaster587.advancedRocketry.dimension.DimensionProperties;
+import zmaster587.advancedRocketry.stargatemc.Galaxy;
+import zmaster587.advancedRocketry.stations.SpaceObjectManager;
+import zmaster587.advancedRocketry.api.stations.ISpaceObject;
 
 @Optional.InterfaceList({@Optional.Interface(iface = "li.cil.oc.api.network.Environment", modid = "opencomputers"), @Optional.Interface(iface = "li.cil.oc.api.network.WirelessEndpoint", modid = "opencomputers")})
 public abstract class StargateAbstractBaseTile extends TileEntity implements StateProviderInterface, ITickable, ICapabilityProvider, ScheduledTaskExecutorInterface, Environment, WirelessEndpoint, PreparableInterface {
@@ -95,6 +109,7 @@ public abstract class StargateAbstractBaseTile extends TileEntity implements Sta
 
     private boolean isInitiating;
 
+    // Last Pos, not Origin Pos.
     private BlockPos lastPos = pos;
 
     protected void engageGate() {
@@ -152,6 +167,7 @@ public abstract class StargateAbstractBaseTile extends TileEntity implements Sta
     }
 
     public void onBlockBroken() {
+        //TODO: Remove this from the Dimension Listing by address as well.
         for (StargateAddress address : gateAddressMap.values())
             getNetwork().removeStargate(address);
     }
@@ -161,8 +177,10 @@ public abstract class StargateAbstractBaseTile extends TileEntity implements Sta
         resetTargetIncomingAnimation();
 
         if (stargateState.initiating() || (stargateState.engaged() && targetGatePos == null)) {
+            JSG.logger.info("Connection lost 6");
             attemptClose(StargateClosedReasonEnum.CONNECTION_LOST);
         } else if (stargateState.engaged()) {
+            JSG.logger.info("Connection lost 7");
             targetGatePos.getTileEntity().attemptClose(StargateClosedReasonEnum.CONNECTION_LOST);
         }
 
@@ -283,6 +301,10 @@ public abstract class StargateAbstractBaseTile extends TileEntity implements Sta
 
         if (!resultTarget.result.ok()) {
             dialingFailed(resultTarget.result);
+
+            /* TODO Find a test case for resultTarget.targetVaild
+
+             */
             if (resultTarget.targetVaild && getNetwork().getStargate(dialedAddress) != null && getNetwork().getStargate(dialedAddress).getTileEntity() != null) {
                 // We can call dialing failed on the target gate
                 getNetwork().getStargate(dialedAddress).getTileEntity().dialingFailed(StargateOpenResult.CALLER_HUNG_UP);
@@ -298,6 +320,7 @@ public abstract class StargateAbstractBaseTile extends TileEntity implements Sta
      */
     protected ResultTargetValid attemptOpenDialed() {
         boolean targetValid = false;
+
         StargateOpenResult result = checkAddressAndEnergy(dialedAddress);
 
         if (result.ok()) {
@@ -305,7 +328,6 @@ public abstract class StargateAbstractBaseTile extends TileEntity implements Sta
 
             StargatePos targetGatePos = getNetwork().getStargate(dialedAddress);
             StargateAbstractBaseTile targetTile = targetGatePos.getTileEntity();
-
             if (new StargateOpeningEvent(this, targetGatePos.getTileEntity(), isInitiating).post()) {
                 // Gate open cancelled by event
                 return new ResultTargetValid(StargateOpenResult.ABORTED_BY_EVENT, targetValid);
@@ -321,6 +343,70 @@ public abstract class StargateAbstractBaseTile extends TileEntity implements Sta
             targetTile.dialedAddress.clear();
             targetTile.dialedAddress.addAll(gateAddressMap.get(targetGatePos.symbolType).subList(0, dialedAddress.size() - 1));
             targetTile.dialedAddress.addOrigin();
+
+            // BEGIN STARGATEMC Dialling Logic
+
+            DimensionProperties destProps = zmaster587.advancedRocketry.dimension.DimensionManager.getInstance().getEffectiveDimId(targetGatePos.dimensionID, targetGatePos.gatePos);
+
+            DimensionProperties sourceProps = zmaster587.advancedRocketry.dimension.DimensionManager.getInstance().getEffectiveDimId(world.provider.getDimension(), getPos());
+
+            if (destProps == null || sourceProps == null) {
+                // Failing due to source or destination gravity well missing. Only possible scenarios are in FTL or on a dimension that isnt mapped to AR.
+                JSG.logger.info("Failing gate dial due to source or destination dimProps missing.");
+                return new ResultTargetValid(StargateOpenResult.ABORTED_BY_EVENT, targetValid);
+            }
+            // Iterate over all stations.
+
+            
+            ArrayList<StargatePos> gatesOnPlanetSource = new ArrayList<>();
+            ArrayList<StargatePos> gatesInOrbitDestination = new ArrayList<>();
+            ArrayList<StargatePos> gatesInOrbitSource = new ArrayList<>();
+            ArrayList<StargatePos> gatesOnPlanetDestination = new ArrayList<>();
+
+            boolean sourceInOrbit = world.provider.getDimension() != sourceProps.getId();
+            boolean destInOrbit = targetGatePos.getTileEntity().world.provider.getDimension() != destProps.getId();
+            boolean sourceIsAbleToBypassRules = (world.provider.getDimension() <= -9000 || targetGatePos.getTileEntity().world.provider.getDimension() <= -9000);
+
+            int spaceDimId = zmaster587.advancedRocketry.api.ARConfiguration.getCurrentConfig().spaceDimId;
+
+            World spaceWorld = DimensionManager.getWorld(0).getMinecraftServer().getWorld(spaceDimId);
+            for (StargateAddress address : getNetwork().get(world).getMapFromType(SymbolTypeEnum.MILKYWAY).keySet()) {
+                StargatePos position = getNetwork().get(world).getMapFromType(SymbolTypeEnum.MILKYWAY).get(address);
+                    if (!gatesOnPlanetSource.contains(position) && position.dimensionID == sourceProps.getId()) gatesOnPlanetSource.add(position);
+                    if (!gatesOnPlanetDestination.contains(position) && position.dimensionID == destProps.getId()) gatesOnPlanetDestination.add(position);            
+                    if (position.dimensionID != spaceDimId) continue;    
+                    if (zmaster587.advancedRocketry.dimension.DimensionManager.getInstance().getEffectiveDimId(spaceWorld, position.gatePos) == null) continue;
+                    if (!gatesInOrbitSource.contains(position) && zmaster587.advancedRocketry.dimension.DimensionManager.getInstance().getEffectiveDimId(spaceWorld, position.gatePos).getId() == sourceProps.getId()) gatesInOrbitSource.add(position);
+                    if (!gatesInOrbitDestination.contains(position) && zmaster587.advancedRocketry.dimension.DimensionManager.getInstance().getEffectiveDimId(spaceWorld, position.gatePos).getId() == destProps.getId()) gatesInOrbitDestination.add(position);
+                
+            }
+
+            //TODO: Space versions of the conflict detection.
+            if (!sourceIsAbleToBypassRules) {
+                // Prevent a dialling a target gate that is in orbit unless it is the only one in orbit and none are on the planet.
+                if (destInOrbit && (gatesInOrbitDestination.size() != 1 || gatesOnPlanetDestination.size() != 0)) {
+                    JSG.logger.info("Failing gate dial due to destination in orbit and not only gate - gates present on planet: " + gatesOnPlanetDestination.size() + " and in orbit: " + gatesInOrbitDestination.size());
+                    return new ResultTargetValid(StargateOpenResult.ABORTED_BY_EVENT, targetValid);
+                }
+                // Prevent a dialling a target gate that is on a planet unless it is the only one on the planet.
+                if (!destInOrbit && (gatesOnPlanetDestination.size() > 1)) {
+                    JSG.logger.info("Failing gate dial due to destination not in orbit and not only gate - gates present on planet: " + gatesOnPlanetDestination.size() + " and in orbit: " + gatesInOrbitDestination.size());
+                    return new ResultTargetValid(StargateOpenResult.ABORTED_BY_EVENT, targetValid);
+                }
+                
+                // Prevent a dialling from a gate that is in orbit unless it is the only one in orbit and none are on the planet.
+                if (sourceInOrbit && (gatesInOrbitSource.size() != 1 || gatesInOrbitSource.size() != 0)) {
+                    JSG.logger.info("Failing gate dial due to source in orbit and not only gate - gates present on planet: " + gatesInOrbitSource.size() + " and in orbit: " + gatesInOrbitSource.size());
+                    return new ResultTargetValid(StargateOpenResult.ABORTED_BY_EVENT, targetValid);
+                }
+                // Prevent a dialling from a gate that is on a planet unless it is the only one on the planet.
+                if (!sourceInOrbit && (gatesOnPlanetSource.size() > 1)) {
+                    JSG.logger.info("Failing gate dial due to source not in orbit and not only gate - gates present on planet: " + gatesOnPlanetSource.size() + " and in orbit: " + gatesInOrbitSource.size());
+                    return new ResultTargetValid(StargateOpenResult.ABORTED_BY_EVENT, targetValid);
+                }
+            }
+        } else {
+                JSG.logger.info("Failing gate dial due to : " + result.name());
         }
 
         return new ResultTargetValid(result, targetValid);
@@ -409,10 +495,27 @@ public abstract class StargateAbstractBaseTile extends TileEntity implements Sta
 
     protected boolean checkAddressLength(StargateAddressDynamic address, StargatePos targetGatePosition) {
         if (targetGatePosition == null) return false;
-        boolean localDial = world.provider.getDimension() == targetGatePosition.dimensionID || StargateDimensionConfig.isGroupEqual(world.provider.getDimensionType(), DimensionManager.getProviderType(targetGatePosition.dimensionID));
+        // Is local dial
+
+        //boolean localDial = world.provider.getDimension() == targetGatePosition.dimensionID || StargateDimensionConfig.isGroupEqual(world.provider.getDimensionType(), DimensionManager.getProviderType(targetGatePosition.dimensionID));
 
         // TODO Optimize this, prevent dimension from loading only to check the SymbolType...
-        return address.size() < getSymbolType().getMinimalSymbolCountTo(targetGatePosition.getTileEntity().getSymbolType(), localDial);
+        return address.size() < getMinimumSymbolsForDial(targetGatePosition);
+    }
+    
+    public int getMinimumSymbolsForDial(StargatePos targetGatePosition) {
+
+        DimensionProperties destProps = zmaster587.advancedRocketry.dimension.DimensionManager.getInstance().getEffectiveDimId(targetGatePosition.dimensionID, targetGatePosition.gatePos);
+
+        DimensionProperties sourceProps = zmaster587.advancedRocketry.dimension.DimensionManager.getInstance().getEffectiveDimId(world.provider.getDimension(), getPos());
+
+        if (destProps == null || sourceProps == null) return 10; // This requires a gate dial 10 symbols in a scenario where it should not dial. Should fail 100% of the time. Scenarios this covers are FTL and unmappe dims.
+
+        if (Galaxy.forDimProps(destProps).equals(Galaxy.forDimProps(sourceProps))) return 7;
+        if (Galaxy.forDimProps(destProps).equals(Galaxy.Destiny) || Galaxy.Destiny.equals(Galaxy.forDimProps(sourceProps))) return 9;
+        if (Galaxy.forDimProps(destProps).equals(Galaxy.Alterran) || Galaxy.Alterran.equals(Galaxy.forDimProps(sourceProps))) return 9;
+        if (Galaxy.forDimProps(destProps).equals(Galaxy.GalacticVoid) || Galaxy.GalacticVoid.equals(Galaxy.forDimProps(sourceProps))) return 9;
+        return 8;
     }
 
     public void attemptClose(StargateClosedReasonEnum reason) {
@@ -430,7 +533,7 @@ public abstract class StargateAbstractBaseTile extends TileEntity implements Sta
         closeGate(reason);
     }
 
-    protected static class ResultTargetValid {
+    public static class ResultTargetValid {
         public final StargateOpenResult result;
         public final boolean targetVaild;
 
@@ -484,9 +587,9 @@ public abstract class StargateAbstractBaseTile extends TileEntity implements Sta
         this.setGateAddress(this.getSymbolType(), address);
         updateFacing(this.world.getBlockState(this.pos).getValue(JSGProps.FACING_HORIZONTAL), this.world.getBlockState(this.pos).getValue(JSGProps.FACING_VERTICAL), true);
         lastPos = this.pos;
-        markDirty();
+        markDirty();   
     }
-
+    
     public StargateAddressDynamic getDialedAddress() {
         return dialedAddress;
     }
@@ -760,6 +863,19 @@ public abstract class StargateAbstractBaseTile extends TileEntity implements Sta
      * @return True if the connecion is valid.
      */
     protected boolean verifyConnection() {
+        
+        // BEGIN STARGATEMC Dialling Logic
+
+        if (targetGatePos != null && targetGatePos.gatePos != null) {
+            DimensionProperties destProps = zmaster587.advancedRocketry.dimension.DimensionManager.getInstance().getEffectiveDimId(targetGatePos.dimensionID, targetGatePos.gatePos);
+
+            DimensionProperties sourceProps = zmaster587.advancedRocketry.dimension.DimensionManager.getInstance().getEffectiveDimId(world.provider.getDimension(), getPos());
+
+            if (destProps == null || sourceProps == null) {
+                // Failing due to source or destination gravity well missing. Only possible scenarios are in FTL or on a dimension that isnt mapped to AR.
+                return false;
+            }
+        }
         if ((targetGatePos == null || targetGatePos.getTileEntity() == null) && !randomIncomingIsActive) {
             closeGate(StargateClosedReasonEnum.CONNECTION_LOST);
             return false;
@@ -872,7 +988,18 @@ public abstract class StargateAbstractBaseTile extends TileEntity implements Sta
     private boolean addedToNetwork;
 
     // ------------------------------------------------------------------------
-    // Stargate incoming wormhole from unknow
+    // Stargate incoming wormhole from unknown
+
+    //STARGATEMC INCURSIONS
+
+    ArrayList<BlockPos> perimeterPositions = null;
+    ArrayList<BlockPos> midrangePositions = null;
+    ArrayList<BlockPos> closePositions = null;
+    ArrayList<ICustomNpc> incursionNPCs = new ArrayList<>();;
+    NpcRace race = null;
+    DevelopmentStage stage = null;
+    int spawnedIndex = 0;
+    
 
     public int randomIncomingEntities = 0;
     public int randomIncomingAddrSize = 7;
@@ -900,6 +1027,13 @@ public abstract class StargateAbstractBaseTile extends TileEntity implements Sta
     }
 
     public void resetRandomIncoming() {
+        this.perimeterPositions = null;
+        this.midrangePositions = null;
+        this.closePositions = null;
+        this.incursionNPCs.clear();
+        this.race = null;
+        this.stage = null;
+        this.spawnedIndex = 0;
         this.randomIncomingIsActive = false;
         this.randomIncomingEntities = 0;
         this.randomIncomingState = 0;
@@ -913,7 +1047,6 @@ public abstract class StargateAbstractBaseTile extends TileEntity implements Sta
     public boolean getForceUnstable(){
         return false;
     }
-
     @Override
     public void update() {
         // Scheduled tasks
@@ -934,7 +1067,7 @@ public abstract class StargateAbstractBaseTile extends TileEntity implements Sta
             }
 
             if (stargateState.engaged() && targetGatePos == null && !randomIncomingIsActive) {
-                JSG.error("A stargateState indicates the Gate should be open, but targetGatePos is null. This is a bug. Closing gate...");
+                JSG.logger.info("A stargateState indicates the Gate should be open, but targetGatePos is null. This is a bug. Closing gate...");
                 attemptClose(StargateClosedReasonEnum.CONNECTION_LOST);
             }
 
@@ -971,7 +1104,7 @@ public abstract class StargateAbstractBaseTile extends TileEntity implements Sta
                 if (this.stargateState.engaged()) {
                     StargateAbstractBaseTile tile = targetGatePos.getTileEntity();
                     if (tile != null) {
-                        if (tile.stargateState.idle()) {
+                        if (tile.stargateState.idle()) {          
                             this.attemptClose(StargateClosedReasonEnum.CONNECTION_LOST);
                         }
                     }
@@ -1010,17 +1143,12 @@ public abstract class StargateAbstractBaseTile extends TileEntity implements Sta
                      *
                      * 2020-04-25: changed the below to check if the gate is being sufficiently externally powered and, if so,
                      * do not start flickering even if the internal power isn't enough.
-                     *
-                     * 2023-06-29: added tile config bypass for this
                      */
-
-                    boolean forceUnstable = getForceUnstable();
-
+                    boolean forceUnstable = getForceUnstable();                    
                     // Horizon becomes unstable
                     if (horizonFlashTask == null && (forceUnstable || (energySecondsToClose < JSGConfig.Stargate.power.instabilitySeconds && energyTransferedLastTick < 0))) {
                         resetFlashingSequence();
                         shouldBeUnstable = true;
-
                         setHorizonFlashTask(new ScheduledTask(EnumScheduledTask.HORIZON_FLASH, (int) (Math.random() * 40) + 5));
                     }
 
@@ -1029,7 +1157,6 @@ public abstract class StargateAbstractBaseTile extends TileEntity implements Sta
                         horizonFlashTask = null;
                         isCurrentlyUnstable = false;
                         shouldBeUnstable = false;
-
                         updateFlashState(false);
                     }
 
@@ -1366,6 +1493,7 @@ public abstract class StargateAbstractBaseTile extends TileEntity implements Sta
             if (isMerged) onGateBroken();
 
             if (stargateState.engaged()) {
+
                 targetGatePos.getTileEntity().closeGate(StargateClosedReasonEnum.CONNECTION_LOST);
             }
         } else {
@@ -1452,13 +1580,11 @@ public abstract class StargateAbstractBaseTile extends TileEntity implements Sta
 
     private int flashIndex = 0;
     public boolean isCurrentlyUnstable = false;
-
     /**
      * Defines if gate should be unstable
      * - this variable is used for OC methods
      */
     public boolean shouldBeUnstable = false;
-
     private void resetFlashingSequence() {
         flashIndex = 0;
         isCurrentlyUnstable = false;
@@ -1816,9 +1942,7 @@ public abstract class StargateAbstractBaseTile extends TileEntity implements Sta
         compound.setInteger("horizonSegments", horizonSegments);
         compound.setLong("openedSince", openedSince);
         compound.setInteger("facingVertical", (facingVertical == EnumFacing.UP ? 2 : facingVertical == EnumFacing.DOWN ? 1 : 0));
-
         compound.setLong("lastPos", (lastPos != null ? lastPos.toLong() : pos.toLong()));
-
         return super.writeToNBT(compound);
     }
 
@@ -1866,7 +1990,6 @@ public abstract class StargateAbstractBaseTile extends TileEntity implements Sta
             int fVertIndex = compound.getInteger("facingVertical");
             facingVertical = (fVertIndex == 2 ? EnumFacing.UP : fVertIndex == 1 ? EnumFacing.DOWN : EnumFacing.SOUTH);
         }
-
         if(compound.hasKey("lastPos"))
             lastPos = BlockPos.fromLong(compound.getLong("lastPos"));
         else

@@ -14,6 +14,7 @@ import tauri.dev.jsg.item.linkable.gdo.GDOItem;
 import tauri.dev.jsg.item.mysterious.PegasusPageMysteriousItem;
 import tauri.dev.jsg.item.mysterious.UniversePageMysteriousItem;
 import tauri.dev.jsg.item.notebook.NotebookItem;
+import tauri.dev.jsg.item.currency.CurrencyItem;
 import tauri.dev.jsg.item.notebook.PageNotebookItem;
 import tauri.dev.jsg.item.renderer.CustomModelItemInterface;
 import tauri.dev.jsg.item.mysterious.MilkyWayPageMysteriousItem;
@@ -131,6 +132,9 @@ public class JSGItems {
     public static final MilkyWayPageMysteriousItem PAGE_MYSTERIOUS_ITEM_MILKYWAY = new MilkyWayPageMysteriousItem();
     public static final PegasusPageMysteriousItem PAGE_MYSTERIOUS_ITEM_PEGASUS = new PegasusPageMysteriousItem();
     public static final UniversePageMysteriousItem PAGE_MYSTERIOUS_ITEM_UNIVERSE = new UniversePageMysteriousItem();
+    public static final CurrencyItem UNREFINED_NAQUADAH = new CurrencyItem(1);
+    public static final CurrencyItem REFINED_NAQUADAH = new CurrencyItem(2);
+    public static final CurrencyItem ENRICHED_NAQUADAH = new CurrencyItem(3);
     public static final UniverseDialerItem UNIVERSE_DIALER = new UniverseDialerItem();
 
     public static final GDOItem GDO = new GDOItem();
@@ -314,6 +318,9 @@ public class JSGItems {
             PAGE_MYSTERIOUS_ITEM_MILKYWAY,
             PAGE_MYSTERIOUS_ITEM_PEGASUS,
             PAGE_MYSTERIOUS_ITEM_UNIVERSE,
+            ENRICHED_NAQUADAH,
+            UNREFINED_NAQUADAH,
+            REFINED_NAQUADAH,
 
 
             // ----------------------

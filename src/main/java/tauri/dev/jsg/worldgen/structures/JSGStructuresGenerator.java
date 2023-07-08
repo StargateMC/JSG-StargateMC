@@ -19,9 +19,17 @@ import tauri.dev.jsg.worldgen.util.GeneratedStargate;
 import tauri.dev.jsg.worldgen.util.JSGStructurePos;
 import tauri.dev.jsg.worldgen.util.JSGWorldTopBlock;
 
+import net.minecraftforge.common.DimensionManager;
 import java.util.ArrayList;
 import java.util.Objects;
 import java.util.Random;
+
+import zmaster587.advancedRocketry.dimension.DimensionProperties;
+import zmaster587.advancedRocketry.stations.SpaceObjectManager;
+import tauri.dev.jsg.stargate.network.StargateNetwork;
+import tauri.dev.jsg.stargate.network.StargatePos;
+import tauri.dev.jsg.stargate.network.StargateAddress;
+import java.util.Map;
 
 import static tauri.dev.jsg.worldgen.util.JSGWorldTopBlock.getTopBlock;
 
@@ -29,23 +37,48 @@ import static tauri.dev.jsg.worldgen.util.JSGWorldTopBlock.getTopBlock;
  * @author MrJake222
  */
 public class JSGStructuresGenerator implements IWorldGenerator {
-    @Override
-    public void generate(Random random, int chunkX, int chunkZ, World world, IChunkGenerator chunkGenerator, IChunkProvider chunkProvider) {
-        for (EnumStructures structure : EnumStructures.values()) {
-            if(world.getWorldType() == WorldType.FLAT) return;
-            if (structure.getActualStructure(world.provider.getDimension()).dimensionToSpawn == world.provider.getDimension()) {
-                if (structure.randomGeneratorEnabled()) {
-                    if (structure.getChance() > 0 && (random.nextFloat() < structure.getChance())) {
-                        JSGStructuresGenerator.generateStructure(structure, world, random, chunkX, chunkZ, false);
-                        return; // - if not -> causing cascading worldgen lag
-                    }
-                }
+
+    // This checks to see if a gate is on or in orbit of a world.
+    public boolean canGateSpawnOn(World w, BlockPos pos) {
+        DimensionProperties sourceProps = zmaster587.advancedRocketry.dimension.DimensionManager.getInstance().getEffectiveDimId(w.provider.getDimension(), pos);
+        if (sourceProps == null) return false;
+
+        int gatesOnPlanetSource = StargateNetwork.get(w).getMap().size();
+        int spaceDimId = zmaster587.advancedRocketry.api.ARConfiguration.getCurrentConfig().spaceDimId;
+
+        World spaceWorld = DimensionManager.getWorld(0).getMinecraftServer().getWorld(spaceDimId);
+        int gatesInOrbitSource = 0;
+        for (Map<StargateAddress, StargatePos> address : StargateNetwork.get(spaceWorld).getMap().values()) {
+            for (StargatePos position : address.values()) {
+                if (zmaster587.advancedRocketry.dimension.DimensionManager.getInstance().getEffectiveDimId(spaceWorld, position.gatePos) == null) continue;
+                if (zmaster587.advancedRocketry.dimension.DimensionManager.getInstance().getEffectiveDimId(spaceWorld, position.gatePos).getId() == sourceProps.getId()) gatesInOrbitSource++;
             }
         }
+        return (gatesOnPlanetSource == 0 && gatesInOrbitSource == 0);
+    }
+
+    @Override
+    public void generate(Random random, int chunkX, int chunkZ, World world, IChunkGenerator chunkGenerator, IChunkProvider chunkProvider) {
+        return;
+        /*
+        for (EnumStructures structure : EnumStructures.values()) {
+            if(world.getWorldType() == WorldType.FLAT) return;
+            // TODO: Remove dimensionToSpawn check. Add a check for if structure has gate && planet has gates, skip.
+            
+            if (structure.getActualStructure(world.provider.getDimension()).isStargateStructure && !canGateSpawnOn(world, new BlockPos((chunkX * 16), 32, (chunkZ * 16)))) { continue; }
+            if (structure.randomGeneratorEnabled()) {
+                if (structure.getChance() > 0 && (random.nextFloat() < structure.getChance())) {
+                    JSGStructuresGenerator.generateStructure(structure, world, random, chunkX, chunkZ, false);
+                    return; // - if not -> causing cascading worldgen lag
+                }
+            }
+            
+        }
+        */
     }
 
     public static GeneratedStargate generateStructure(EnumStructures structure, World world, Random random, int chunkX, int chunkZ, boolean notRandomGen) {
-        return generateStructure(structure, world, random, chunkX, chunkZ, notRandomGen, true, structure.getActualStructure(0).dimensionToSpawn);
+        return generateStructure(structure, world, random, chunkX, chunkZ, notRandomGen, true, structure.getActualStructure(world.provider.getDimension()).dimensionToSpawn);
     }
     public static GeneratedStargate generateStructure(EnumStructures structure, World world, Random random, int chunkX, int chunkZ, boolean notRandomGen, boolean notCommandGen, int dimId) {
         WorldServer worldToSpawn = Objects.requireNonNull(world.getMinecraftServer()).getWorld(dimId);

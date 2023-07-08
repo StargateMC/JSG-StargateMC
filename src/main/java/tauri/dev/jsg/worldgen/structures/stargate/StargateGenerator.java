@@ -12,6 +12,10 @@ import tauri.dev.jsg.worldgen.structures.EnumStructures;
 import tauri.dev.jsg.worldgen.util.GeneratedStargate;
 import tauri.dev.jsg.worldgen.util.JSGStructurePos;
 import tauri.dev.jsg.worldgen.structures.JSGStructuresGenerator;
+import zmaster587.advancedRocketry.stargatemc.ARIntegration;
+import zmaster587.advancedRocketry.stargatemc.Galaxy;
+import zmaster587.advancedRocketry.api.dimension.solar.StellarBody;
+import zmaster587.advancedRocketry.dimension.DimensionProperties;
 
 import javax.annotation.Nonnull;
 import java.util.Objects;
@@ -23,6 +27,52 @@ import java.util.Random;
  * @editedby MineDragonCZ_
  */
 public class StargateGenerator {
+
+
+    public static GeneratedStargate customGateSpawn(Galaxy g, boolean habitable, int attempts, @Nonnull EntityPlayer playerIn) {
+        System.out.println("Attempting to generate gate and star system in : " + g.name() + " habitable: " + habitable + " attempts left: " + attempts);
+        if (attempts == 0) return null; // Couldnt locate gate after retries.
+        Random r = new Random();
+        StellarBody star = ARIntegration.generateStarSystem(g, r.nextInt(8)+1,r.nextInt(4)+1);
+        int dimID = -100000;
+        int count = 0;
+        while ((star.getPlanets().get(count).isGasGiant() || (habitable && !((DimensionProperties)star.getPlanets().get(count)).isHabitable())) && count < (star.getPlanets().size()-1)) {
+                count++;
+        }
+        if (count == (star.getPlanets().size() -1)) {
+            ARIntegration.cleanupStarSystem(star.getId());   
+            return customGateSpawn(g, habitable, --attempts, playerIn);
+        }        
+        SymbolTypeEnum type = null;
+        switch (g) {
+            case MilkyWay:
+                type = SymbolTypeEnum.MILKYWAY;
+                break;
+            case Pegasus:
+                type = SymbolTypeEnum.PEGASUS;
+                break;
+            case Destiny:
+                type = SymbolTypeEnum.UNIVERSE;
+                break;
+            case Ida:
+                type = SymbolTypeEnum.MILKYWAY;
+                break;
+            case Othala:
+                type = SymbolTypeEnum.MILKYWAY;
+                break;
+            case Alterran:
+                type = SymbolTypeEnum.UNIVERSE;
+                break;
+            case GalacticVoid:
+                type = SymbolTypeEnum.UNIVERSE;
+                break;
+        }
+        GeneratedStargate sg = StargateGenerator.mystPageGeneration(playerIn.world, type, star.getPlanets().get(count).getId(), playerIn);
+        if (sg == null) {
+            return customGateSpawn(g, habitable, --attempts, playerIn);
+        }
+        return sg;
+    }
 
     /**
      * Method used to generate stargate in random position by mysterious page
@@ -36,12 +86,11 @@ public class StargateGenerator {
         int min = JSGConfig.WorldGen.mystPage.minOverworldCoords;
         int max = JSGConfig.WorldGen.mystPage.maxOverworldCoords;
 
-        BlockPos pPos = playerIn.getPosition();
-        int x = (Math.abs(pPos.getX()) + (min + (int) (rand.nextFloat() * max)));
-        int z = (Math.abs(pPos.getZ()) + (min + (int) (rand.nextFloat() * max)));
+        int x = ((min + (int) (rand.nextFloat() * max)));
+        int z = ((min + (int) (rand.nextFloat() * max)));
 
-        if (pPos.getX() < 0) x *= -1;
-        if (pPos.getZ() < 0) z *= -1;
+        if (rand.nextBoolean()) x *= -1;
+        if (rand.nextBoolean()) z *= -1;
 
         JSGStructurePos structurePos = null;
         int chunkX = x / 16;
@@ -64,8 +113,8 @@ public class StargateGenerator {
                         z += 16 * (z < 0 ? 1 : -1);
                 }
             } else if(tries > 0){
-                x = (Math.abs(pPos.getX()) + (min + (int) (rand.nextFloat() * max)));
-                z = (Math.abs(pPos.getZ()) + (min + (int) (rand.nextFloat() * max)));
+                x = ((min + (int) (rand.nextFloat() * max)));
+                z = ((min + (int) (rand.nextFloat() * max)));
             }
 
 

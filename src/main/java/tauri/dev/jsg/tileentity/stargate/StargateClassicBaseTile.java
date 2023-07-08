@@ -1,5 +1,13 @@
 package tauri.dev.jsg.tileentity.stargate;
 
+import com.stargatemc.constants.NpcRace;
+import com.stargatemc.constants.NpcType;
+import com.stargatemc.constants.DevelopmentStage;
+import noppes.npcs.api.entity.ICustomNpc;
+import noppes.npcs.entity.EntityCustomNpc;
+import com.stargatemc.handlers.NpcHandler;
+import com.stargatemc.data.PerWorldData;
+
 import li.cil.oc.api.machine.Arguments;
 import li.cil.oc.api.machine.Callback;
 import li.cil.oc.api.machine.Context;
@@ -80,11 +88,11 @@ import tauri.dev.jsg.tileentity.util.IUpgradable;
 import tauri.dev.jsg.tileentity.util.ScheduledTask;
 import tauri.dev.jsg.util.*;
 import tauri.dev.jsg.util.math.TemperatureHelper;
+import zmaster587.advancedRocketry.stargatemc.Galaxy;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.*;
-
 import static tauri.dev.jsg.stargate.EnumIrisType.IRIS_CREATIVE;
 import static tauri.dev.jsg.stargate.EnumIrisType.IRIS_TITANIUM;
 import static tauri.dev.jsg.stargate.EnumSpinDirection.CLOCKWISE;
@@ -311,8 +319,9 @@ public abstract class StargateClassicBaseTile extends StargateAbstractBaseTile i
         boolean targetValid = result.ok();
         if (connectedToGatePos == null)
             return new ResultTargetValid(StargateOpenResult.CALLER_HUNG_UP, targetValid);
-        if (!(connectedToGatePos.getTileEntity().stargateState.incoming()))
+            if (!(connectedToGatePos.getTileEntity().stargateState.incoming()))
             return new ResultTargetValid(StargateOpenResult.CALLER_HUNG_UP, targetValid);
+        
         if (this.isGateBurried())
             return new ResultTargetValid(StargateOpenResult.GATE_BURRIED, targetValid);
         return super.attemptOpenDialed();
@@ -419,6 +428,7 @@ public abstract class StargateClassicBaseTile extends StargateAbstractBaseTile i
     @Override
     public void onLoad() {
         super.onLoad();
+
         if (!world.isRemote) {
 
             updateBeamers();
@@ -634,6 +644,7 @@ public abstract class StargateClassicBaseTile extends StargateAbstractBaseTile i
         return suma;
     }
 
+
     /**
      * @return temperature of air/blocks/liquids around the gate
      */
@@ -652,11 +663,50 @@ public abstract class StargateClassicBaseTile extends StargateAbstractBaseTile i
 
         return TemperatureHelper.asCelsius(((total > 0) ? TemperatureHelper.asKelvins((totalTemp / total)).toCelsius() : 25)).toKelvins();
     }
-
     @Override
     public boolean getForceUnstable(){
         return (getConfig().getOption(FORCE_UNSTABLE_EH.id).getBooleanValue() || (targetGatePos != null && (targetGatePos.getTileEntity() instanceof StargateClassicBaseTile) && ((StargateClassicBaseTile) targetGatePos.getTileEntity()).getConfig().getOption(FORCE_UNSTABLE_EH.id).getBooleanValue()));
     }
+	public static ArrayList<BlockPos> getRandomSpawnPositions(ArrayList<BlockPos> allspots, int number) {
+		ArrayList<BlockPos> randoms = new ArrayList<>();
+		while (randoms.size() < number && number < allspots.size()) {
+			BlockPos random = allspots.get(new Random().nextInt(allspots.size()));
+			randoms.add(random);
+		}
+		return randoms;		
+	}
+    public ArrayList<BlockPos> getSpawnPositions(BlockPos origin, int maxDistance, int minDistance, int spacing) {
+		ArrayList<BlockPos> positions = new ArrayList<>();
+		for (int x = (origin.getX() - maxDistance); x <= (origin.getX() + maxDistance); x += spacing ) {
+			if (x >= (origin.getX() - minDistance) && x <= (origin.getX() + minDistance)) {	continue; } // Skip if we're in the deadzone near the gate.
+			for (int z = (origin.getZ() - maxDistance); z <= (origin.getZ() + maxDistance); z += spacing ) {
+				if (z >= (origin.getZ() - minDistance) && z <= (origin.getZ() + minDistance)) {	continue; } // Skip if we're in the deadzone near the gate.
+				positions.add(getTopSolidBlockPosition(new BlockPos(x,0,z)));
+			}
+		}
+		return positions;
+	}
+	
+	public BlockPos getTopSolidBlockPosition(BlockPos pos) {
+		BlockPos top = world.getTopSolidOrLiquidBlock(pos);
+        int tries = 10;
+		while (tries > 0 && !isSolidAt(top)) {
+			top = top.down();
+            tries--;
+        }
+        tries = 10;
+		while (!isSolidAt(top)) {
+			top = top.up();
+            tries--;
+		}
+		return top;
+	}
+
+	public boolean isSolidAt(BlockPos pos) {
+        if (pos.getY() == 0 || pos.getY() == 300) return true;
+		IBlockState state = world.getBlockState(pos);
+		return state.getMaterial().isSolid();
+	}
 
     @Override
     public void update() {
@@ -666,7 +716,6 @@ public abstract class StargateClassicBaseTile extends StargateAbstractBaseTile i
                 JSGPacketHandler.INSTANCE.sendToServer(new StateUpdateRequestToServer(pos, StateTypeEnum.GUI_STATE));
             }
         }
-
         // Checking lastFakePos and lastFakeWorld (if changed, close the gate if its open (gate was probably warped))
         if(!world.isRemote){
             if ((lastFakePos != getFakePos() || lastFakeWorld != getFakeWorld())) {
@@ -690,7 +739,6 @@ public abstract class StargateClassicBaseTile extends StargateAbstractBaseTile i
                 }
             }
         }
-
         // Fast dialing
         if (!world.isRemote) {
             boolean shouldBeFast = getConfig().getOption(ENABLE_FAST_DIAL.id).getBooleanValue();
@@ -705,7 +753,8 @@ public abstract class StargateClassicBaseTile extends StargateAbstractBaseTile i
             if (world.getWorldInfo().isThundering() && BlockHelpers.isBlockDirectlyUnderSky(world, topBlockPos)) {
                 Random rand = new Random();
                 float chance = rand.nextFloat();
-                if (chance < JSGConfig.Stargate.mechanics.lightingBoldChance) {
+                if (chance < JSGConfig.Stargate.mechanics.lightingBoldChance) {                    
+
                     boolean canStrike = true;
                     int dim = this.world.provider.getDimension();
                     for(int i : JSGConfig.Stargate.mechanics.lightingStrikeDisabledDims){
@@ -764,9 +813,15 @@ public abstract class StargateClassicBaseTile extends StargateAbstractBaseTile i
                 if (world.getTotalWorldTime() % 200 == 0) { // every 10 seconds
                     int chanceToRandom = rand.nextInt(1000);
 
+                    boolean isBigIncursion = (rand.nextFloat() > 0.8);
+                    boolean isSmallIncursion = (rand.nextFloat() < 0.2);
+                    int max = 4;
+                    if (!isSmallIncursion && !isBigIncursion) max += 8;
+                    if (isBigIncursion) max = 30;
+                    
                     //if chance && stargate state is idle or dialing by DHD and RANDOM INCOMING IS NOT ACTIVATED YET
                     if (chanceToRandom <= JSGConfig.Stargate.rig.chance) {
-                        int entities = rand.nextInt(25);
+                        int entities = rand.nextInt(max);
                         int delay = rand.nextInt(200);
                         if (this instanceof StargateUniverseBaseTile) {
                             delay = rand.nextInt(300);
@@ -821,7 +876,7 @@ public abstract class StargateClassicBaseTile extends StargateAbstractBaseTile i
                         } else resetRandomIncoming();
                     } else if (randomIncomingState == waitOpen) { // open gate
                         if (!stargateState.engaged() && !stargateState.unstable() && stargateState.incoming()) {
-                            randomIncomingState++;
+                            randomIncomingState++;                          
                             targetGatePos = null;
                             setOpenedSince();
 
@@ -848,12 +903,20 @@ public abstract class StargateClassicBaseTile extends StargateAbstractBaseTile i
                         randomIncomingState++;
                     } else if (randomIncomingState >= (waitOpen + wait) && randomIncomingEntities > 0 && (stargateState == EnumStargateState.ENGAGED || stargateState == EnumStargateState.INCOMING)) {
                         randomIncomingState++;
-
                         // Load entities
                         String[] entityListString = JSGConfig.Stargate.rig.entitiesToSpawn;
-                        List<Entity> entityList = new ArrayList<>();
+                        List<Entity> entityList = new ArrayList<Entity>();
                         for (String entityString : entityListString) {
-                            ResourceLocation rlString = new ResourceLocation(entityString);
+                            String[] entityTemporallyList = entityString.split(":");
+                            if (entityTemporallyList.length < 2)
+                                continue; // prevents from Ticking block entity null pointer
+                            String entityStringNew =
+                                    (
+                                            (entityTemporallyList[0].equals("minecraft"))
+                                                    ? entityTemporallyList[1]
+                                                    : entityTemporallyList[0] + ":" + entityTemporallyList[1]
+                                    );
+                            ResourceLocation rlString = new ResourceLocation(entityStringNew);
                             entityList.add(EntityList.createEntityByIDFromName(rlString, world));
                         }
 
@@ -865,22 +928,77 @@ public abstract class StargateClassicBaseTile extends StargateAbstractBaseTile i
                             int posX = this.getGateCenterPos().getX();
                             int posY = this.getGateCenterPos().getY();
                             int posZ = this.getGateCenterPos().getZ();
-                            // create entity
-                            Entity mobEntity = new EntityZombie(world);
-
-                            int entitiesLength = entityList.size();
-                            if (entitiesLength > 0) {
-                                int randomEntity = rand.nextInt(entitiesLength);
-                                if (entityList.get(randomEntity) != null)
-                                    mobEntity = entityList.get(randomEntity);
+                            Random r = new Random();
+                            if (race == null) race = NpcRace.getRandomForGalaxy(com.stargatemc.constants.Galaxy.forDimensionId(world.provider.getDimension(), this.pos));
+                            if (stage == null) stage = NpcRace.getMinimumStage(race);
+                            
+  
+                            // This opens the iris if the faction isnt hostile.
+                            if (!isIrisOpened() && PerWorldData.getFaction(world.provider.getDimension()) != null && !race.getFaction().hostileToFaction(PerWorldData.getFaction(world.provider.getDimension()).getId())) {
+                                this.toggleIris();
                             }
-                            mobEntity.setLocationAndAngles(posX, posY, posZ, 0, 0);
+                            if (perimeterPositions == null) perimeterPositions = getRandomSpawnPositions(getSpawnPositions(this.getGateCenterPos(), 48, 32, 8), r.nextInt(12) + 4);
+			                if (midrangePositions == null) midrangePositions = getRandomSpawnPositions(getSpawnPositions(this.getGateCenterPos(), 32, 24, 4), r.nextInt(6) + 2);
+			                if (closePositions == null) closePositions = getRandomSpawnPositions(getSpawnPositions(this.getGateCenterPos(), 16, 6, 2), r.nextInt(5) + 1);
+                            boolean isMidRange = false;
+                            boolean isCloseRange = false;
+                            int total = perimeterPositions.size() + midrangePositions.size() + closePositions.size();
+                            if (spawnedIndex >= perimeterPositions.size()) isMidRange = true;
+                            if (spawnedIndex >= perimeterPositions.size()+midrangePositions.size()) {
+                                isMidRange = false;
+                                isCloseRange = true;
+                            }
+				            NpcType type = NpcType.Soldier;
+                            int rando = r.nextInt(100);
+                            if (isMidRange && !isCloseRange) {
+                                if (rando <= 10) type = NpcType.Common_Boss; // 10% chance of being a common boss (eg: Squad commander) in the interior
+                                if (rando <= 5) type = NpcType.Uncommon_Boss; // 2% chance of being a uncommon boss (Special forces?)
+                            }
+                            
+                            if (isCloseRange) {
+                                if (rando >= 10) type = NpcType.Uncommon_Boss; // 2% chance of being a uncommon boss (Special forces?)
+                                if (rando >= 40) type = NpcType.Civilian;
+                                if (rando >= 70) type = NpcType.Trader;
+                                if (rando >= 91) type = NpcType.Rare_Boss;
+                                if (rando >= 93) type = NpcType.Legendary_Boss;
+                                if (rando >= 95) type = NpcType.Banker;
+                            }
                             if (isIrisOpened() || irisType.equals(EnumIrisType.NULL)) {
                                 // spawn zombie
-                                this.world.spawnEntity(mobEntity);
+
+                            ICustomNpc npc = NpcHandler.spawnNpcAt(world,  this.getGateCenterPos(), type.name(), race, stage, false);
+                            npc.setRotation(0);
+                            npc.getStats().setRespawnType(4); // 4 to naturally despawn.
+                            npc.getStats().setHideDeadBody(false);
+                            BlockPos newHome = null;
+                            if (isCloseRange && closePositions.size() > 0) {
+                                int index = spawnedIndex - perimeterPositions.size() - midrangePositions.size();
+                                int adjustedIndex = index % closePositions.size();
+                                if (adjustedIndex < 0) {
+                                    adjustedIndex += closePositions.size();
+                                }
+                                newHome = closePositions.get(adjustedIndex);
+                            }
+                            if (isMidRange && midrangePositions.size() > 0) {
+                                int index = spawnedIndex - perimeterPositions.size();
+                                int adjustedIndex = index % midrangePositions.size();
+                                if (adjustedIndex < 0) {
+                                    adjustedIndex += midrangePositions.size();
+                                }
+                                newHome = midrangePositions.get(adjustedIndex);
+                            }
+
+                            if (!isMidRange && !isCloseRange && spawnedIndex < perimeterPositions.size()) {
+                                newHome = perimeterPositions.get(spawnedIndex);
+                            }
+                            spawnedIndex++;		
+                            npc.setHome(newHome.getX(), newHome.getY(), newHome.getZ());
+                            npc.getAi().setReturnsHome(true);
+                            npc.getAi().setMovingType(1); // Wander
+                            npc.getAi().setWanderingRange(r.nextInt(28)+4);
+                            this.incursionNPCs.add(npc);		
                                 JSGSoundHelper.playSoundEvent(world, getGateCenterPos(), SoundEventEnum.WORMHOLE_GO);
 
-                                JSG.debug(RIG_PREFIX + "Spawned " + mobEntity.getName());
                             } else {
                                 // do iris shit
 
@@ -912,7 +1030,6 @@ public abstract class StargateClassicBaseTile extends StargateAbstractBaseTile i
                                         energyStorage.extractEnergy(500, false);
                                     }
                                 }
-                                JSG.debug(RIG_PREFIX + mobEntity.getName() + " hit iris!");
                                 sendSignal(null, "stargate_event_iris_hit", new Object[]{"Something just hit the IRIS!"});
                             }
 
@@ -1159,12 +1276,10 @@ public abstract class StargateClassicBaseTile extends StargateAbstractBaseTile i
         compound.setBoolean("fastDialing", isFastDialing);
 
         compound.setInteger("facingVertical", FacingHelper.toInt(facingVertical));
-
         if (lastFakePos != null)
             compound.setLong("lastFakePos", lastFakePos.toLong());
         if (lastFakeWorld != null)
             compound.setInteger("lastFakeWorld", lastFakeWorld.provider.getDimension());
-
         return super.writeToNBT(compound);
     }
 
@@ -1213,12 +1328,10 @@ public abstract class StargateClassicBaseTile extends StargateAbstractBaseTile i
         this.isFastDialing = compound.getBoolean("fastDialing");
 
         facingVertical = FacingHelper.fromInt(compound.getInteger("facingVertical"));
-
         if (compound.hasKey("lastFakePos"))
             this.lastFakePos = BlockPos.fromLong(compound.getLong("lastFakePos"));
         if (compound.hasKey("lastFakeWorld") && world.getMinecraftServer() != null)
             this.lastFakeWorld = this.world.getMinecraftServer().getWorld(compound.getInteger("lastFakeWorld"));
-
         super.readFromNBT(compound);
     }
 
@@ -1340,13 +1453,13 @@ public abstract class StargateClassicBaseTile extends StargateAbstractBaseTile i
                 " - ONLY FOR MW AND UNI GATES - "
         ),
         FORCE_UNSTABLE_EH(
-                14, "forceUnstable", JSGConfigOptionTypeEnum.BOOLEAN, "false",
-                "Force unstable state on this gate?"
-        ),
-        UNIVERSE_ORANGE_SHIELD(
-                15, "universeOrangeShield", JSGConfigOptionTypeEnum.BOOLEAN, "true",
-                "Should be universe gate's shield orange?"
-        );
+            14, "forceUnstable", JSGConfigOptionTypeEnum.BOOLEAN, "false",
+            "Force unstable state on this gate?"
+    ),
+    UNIVERSE_ORANGE_SHIELD(
+            15, "universeOrangeShield", JSGConfigOptionTypeEnum.BOOLEAN, "true",
+            "Should be universe gate's shield orange?"
+    );
 
         public final int id;
         public final String label;
@@ -2382,7 +2495,6 @@ public abstract class StargateClassicBaseTile extends StargateAbstractBaseTile i
             }
         }
     }
-
     @Override
     public void refresh() {
         super.refresh();
@@ -2393,7 +2505,7 @@ public abstract class StargateClassicBaseTile extends StargateAbstractBaseTile i
 
     protected World lastFakeWorld = getFakeWorld();
     protected BlockPos lastFakePos = getFakePos();
-
+    
     public World getFakeWorld() {
         return world;
     }
@@ -2703,7 +2815,6 @@ public abstract class StargateClassicBaseTile extends StargateAbstractBaseTile i
 
         return new Object[]{stargateState.toString().toLowerCase()};
     }
-
     @SuppressWarnings({"unused", "unchecked"})
     @Optional.Method(modid = "opencomputers")
     @Callback(doc = "function(address:table|address:string...) -- Returns symbols needed to dial an address")
@@ -2747,7 +2858,6 @@ public abstract class StargateClassicBaseTile extends StargateAbstractBaseTile i
 
         return new Object[]{true, symbols};
     }
-
     @SuppressWarnings({"unused", "unchecked"})
     @Optional.Method(modid = "opencomputers")
     @Callback(doc = "function(address:table|address:string...) -- Returns energy needed to dial an address")

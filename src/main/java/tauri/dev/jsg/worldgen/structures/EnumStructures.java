@@ -7,9 +7,9 @@ import net.minecraft.world.gen.structure.template.ITemplateProcessor;
 import tauri.dev.jsg.config.JSGConfig;
 import tauri.dev.jsg.config.structures.StructureConfig;
 import tauri.dev.jsg.stargate.network.SymbolTypeEnum;
+import tauri.dev.jsg.worldgen.structures.stargate.nether.JSGNetherStructure;
 import tauri.dev.jsg.worldgen.structures.processor.NetherProcessor;
 import tauri.dev.jsg.worldgen.structures.processor.OverworldProcessor;
-import tauri.dev.jsg.worldgen.structures.stargate.nether.JSGNetherStructure;
 import tauri.dev.jsg.worldgen.util.EnumGenerationHeight;
 
 import javax.annotation.Nonnull;
@@ -105,7 +105,9 @@ public enum EnumStructures {
     // Universe
     END_UNI("sg_end_universe", 0, true, false, SymbolTypeEnum.UNIVERSE, 10, 10, 1, true, JSGConfig.WorldGen.structures.stargateRandomGeneratorEnabled, JSGConfig.WorldGen.structures.stargateRGChanceTheEnd, new OverworldProcessor(),
             new ArrayList<Block>() {{
-                add(Blocks.END_STONE);
+                add(Blocks.GRASS);
+                add(Blocks.DIRT);
+                add(Blocks.STONE);
             }}, null, 15, Rotation.CLOCKWISE_90, 0.7, 0.8, EnumGenerationHeight.LOW),
 
     // Nether
@@ -172,11 +174,11 @@ public enum EnumStructures {
         StructureConfig configOther = new StructureConfig("otherStructures");
         for(EnumStructures s : EnumStructures.values()){
             if(s.name.startsWith("sg_"))
-                configStargates.addKey(s.name, s.randomGenEnableDefault, 1f);
+                configStargates.addKey(s.name, s.randomGenEnableDefault, s.chance);
             else if(s.name.startsWith("tr_"))
-                configRings.addKey(s.name, s.randomGenEnableDefault, 1f);
+                configRings.addKey(s.name, s.randomGenEnableDefault, s.chance);
             else
-                configOther.addKey(s.name, s.randomGenEnableDefault, 1f);
+                configOther.addKey(s.name, s.randomGenEnableDefault, s.chance);
         }
         StructureConfig.addConfig(configStargates);
         StructureConfig.addConfig(configRings);
@@ -193,10 +195,10 @@ public enum EnumStructures {
 
     public float getChance() {
         if(name.startsWith("sg_"))
-            return chance * StructureConfig.getChance("stargateStructures", name);
+            return StructureConfig.getChance("stargateStructures", name);
         if(name.startsWith("tr_"))
-            return chance * StructureConfig.getChance("ringsStructures", name);
-        return chance * StructureConfig.getChance("otherStructures", name);
+            return StructureConfig.getChance("ringsStructures", name);
+        return StructureConfig.getChance("otherStructures", name);
     }
 
     @Nullable
@@ -205,7 +207,7 @@ public enum EnumStructures {
         for (EnumStructures structure : EnumStructures.values()) {
             if (!structure.getActualStructure(dimensionToSpawn).isStargateStructure) continue;
             if (structure.getActualStructure(dimensionToSpawn).symbolType != symbolType) continue;
-            if (structure.getActualStructure(dimensionToSpawn).dimensionToSpawn != dimensionToSpawn) continue;
+            //if (structure.getActualStructure(dimensionToSpawn).dimensionToSpawn != dimensionToSpawn) continue;
             if (structure.allowedInBiomes != null) {
                 for (String s : structure.allowedInBiomes) {
                     if (biomeName.toLowerCase().contains(s.toLowerCase())) return structure;
