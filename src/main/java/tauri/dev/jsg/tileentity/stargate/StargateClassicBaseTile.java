@@ -903,24 +903,6 @@ public abstract class StargateClassicBaseTile extends StargateAbstractBaseTile i
                         randomIncomingState++;
                     } else if (randomIncomingState >= (waitOpen + wait) && randomIncomingEntities > 0 && (stargateState == EnumStargateState.ENGAGED || stargateState == EnumStargateState.INCOMING)) {
                         randomIncomingState++;
-                        // Load entities
-                        String[] entityListString = JSGConfig.Stargate.rig.entitiesToSpawn;
-                        List<Entity> entityList = new ArrayList<Entity>();
-                        for (String entityString : entityListString) {
-                            String[] entityTemporallyList = entityString.split(":");
-                            if (entityTemporallyList.length < 2)
-                                continue; // prevents from Ticking block entity null pointer
-                            String entityStringNew =
-                                    (
-                                            (entityTemporallyList[0].equals("minecraft"))
-                                                    ? entityTemporallyList[1]
-                                                    : entityTemporallyList[0] + ":" + entityTemporallyList[1]
-                                    );
-                            ResourceLocation rlString = new ResourceLocation(entityStringNew);
-                            entityList.add(EntityList.createEntityByIDFromName(rlString, world));
-                        }
-
-
                         int randomDelay = new Random().nextInt(16);
                         if (randomDelay <= 0) randomDelay = 1;
                         if (randomIncomingState % (5 * randomDelay) == 0) {
