@@ -112,6 +112,9 @@ dependencies {
     implementation fg.deobf("cofh:RedstoneFlux:${rf_mc_version}-${rf_version}:universal")
     implementation fg.deobf("cofh:CoFHCore:${mc_version}-${cofh_core_version}:universal")
 
+    compileOnly files('libs/StargateMCMod-1.1.7.jar')
+    compileOnly files('libs/CustomNPCs-1.12.2.47.jar')
+    compileOnly files('libs/AdvancedRocketry-2.0.0.11.jar')
     compileOnly fg.deobf("mezz.jei:jei_${mc_version}:${jei_version}:api")
     runtimeOnly fg.deobf("mezz.jei:jei_${mc_version}:${jei_version}")
 
