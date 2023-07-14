@@ -2,10 +2,13 @@ package tauri.dev.jsg.tileentity.stargate;
 
 import com.stargatemc.constants.NpcRace;
 import com.stargatemc.constants.NpcType;
+import com.stargatemc.constants.ConquestState;
+import com.stargatemc.data.PerWorldData;
 import com.stargatemc.constants.DevelopmentStage;
 import noppes.npcs.api.entity.ICustomNpc;
 import noppes.npcs.entity.EntityCustomNpc;
 import com.stargatemc.handlers.NpcHandler;
+import com.stargatemc.listener.listeners.ConquestListener;
 import com.stargatemc.data.PerWorldData;
 
 import li.cil.oc.api.machine.Arguments;
@@ -812,7 +815,7 @@ public abstract class StargateClassicBaseTile extends StargateAbstractBaseTile i
             if (config.getOption(ALLOW_RIG.id).getBooleanValue() && world.isAreaLoaded(pos, 10)) {
                 if (world.getTotalWorldTime() % 200 == 0) { // every 10 seconds
                     int chanceToRandom = rand.nextInt(1000);
-
+                    if (PerWorldData.getConquestState(world.provider.getDimension()).equals(ConquestState.Contested)) chanceToRandom += 900;
                     boolean isBigIncursion = (rand.nextFloat() > 0.8);
                     boolean isSmallIncursion = (rand.nextFloat() < 0.2);
                     int max = 4;
@@ -912,6 +915,13 @@ public abstract class StargateClassicBaseTile extends StargateAbstractBaseTile i
                             int posZ = this.getGateCenterPos().getZ();
                             Random r = new Random();
                             if (race == null) race = NpcRace.getRandomForGalaxy(com.stargatemc.constants.Galaxy.forDimensionId(world.provider.getDimension(), this.pos));
+                            if (PerWorldData.getConquestState(world.provider.getDimension()).equals(ConquestState.Contested)) {
+                                // This could loop, so we'll log it.
+                                while (!ConquestListener.getContestingFactions(world.provider.getDimension()).contains(race)) {
+                                    JSG.logger.warn("Switching race as : " + race.getDisplayName() + " is not contesting: " + world.provider.getDimension());
+                                    race = NpcRace.getRandomForGalaxy(com.stargatemc.constants.Galaxy.forDimensionId(world.provider.getDimension(), this.pos));
+                                }
+                            }
                             if (stage == null) stage = NpcRace.getMinimumStage(race);
                             
   
