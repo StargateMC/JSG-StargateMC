@@ -1071,7 +1071,7 @@ public abstract class StargateAbstractBaseTile extends TileEntity implements Sta
                 attemptClose(StargateClosedReasonEnum.CONNECTION_LOST);
             }
 
-            if (stargateState.engaged() && lastPos != pos) {
+            if (stargateState.engaged() && (lastPos.getX() != pos.getX() || lastPos.getY() != pos.getY() || lastPos.getZ() != pos.getZ())) {
                 lastPos = pos;
                 markDirty();
                 JSG.error("A stargateState indicates the Gate should be open, but last pos is not matching current pos! Closing gate...");
