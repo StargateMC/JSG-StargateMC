@@ -915,6 +915,30 @@ public abstract class StargateClassicBaseTile extends StargateAbstractBaseTile i
                             int posZ = this.getGateCenterPos().getZ();
                             Random r = new Random();
                             if (race == null) race = NpcRace.getRandomForGalaxy(com.stargatemc.constants.Galaxy.forDimensionId(world.provider.getDimension(), this.pos));
+                            if (PerWorldData.getConquestFaction(world.provider.getDimension()) != null && PerWorldData.getConquestFaction(world.provider.getDimension()).equals(NpcRace.CREW_OF_MIDWAY)) {
+                                int random = rand.nextInt(11);
+                                if (random < 7) {
+                                    if (this.pos.getX() == 173 && this.pos.getY() == 165 && this.pos.getZ() ==368) {
+                                        race = NpcRace.STARGATE_COMMAND;
+                                    } else {
+                                        race = NpcRace.ATLANTIS_EXPEDITION;
+                                    }
+                                } else {
+                                    if (random < 9) {
+                                        if (this.pos.getX() == 173 && this.pos.getY() == 165 && this.pos.getZ() == 368) {
+                                            race = NpcRace.CREW_OF_MIDWAY;
+                                        } else {
+                                            race = NpcRace.CREW_OF_DAEDALUS;
+                                        }
+                                    } else {
+                                        if (this.pos.getX() == 173 && this.pos.getY() == 165 && this.pos.getZ() == 368) {
+                                            race = NpcRace.STARGATE_COMMAND;
+                                        } else {
+                                            race = NpcRace.WRAITH;
+                                        }
+                                    }
+                                }
+                            }
                             if (PerWorldData.getConquestState(world.provider.getDimension()).equals(ConquestState.Contested)) {
                                 // This could loop, so we'll log it.
                                 while (!ConquestListener.getContestingFactions(world.provider.getDimension()).contains(race)) {
