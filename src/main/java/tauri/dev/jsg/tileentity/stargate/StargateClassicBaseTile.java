@@ -914,7 +914,6 @@ public abstract class StargateClassicBaseTile extends StargateAbstractBaseTile i
                             int posY = this.getGateCenterPos().getY();
                             int posZ = this.getGateCenterPos().getZ();
                             Random r = new Random();
-                            if (race == null) race = NpcRace.getRandomForGalaxy(com.stargatemc.constants.Galaxy.forDimensionId(world.provider.getDimension(), this.pos));
                             if (race == null && PerWorldData.getConquestFaction(world.provider.getDimension()) != null && PerWorldData.getConquestFaction(world.provider.getDimension()).equals(NpcRace.CREW_OF_MIDWAY)) {
                                 int random = rand.nextInt(11);
                                 if (random < 7) {
@@ -939,6 +938,7 @@ public abstract class StargateClassicBaseTile extends StargateAbstractBaseTile i
                                     }
                                 }
                             }
+                            if (race == null) race = NpcRace.getRandomForGalaxy(com.stargatemc.constants.Galaxy.forDimensionId(world.provider.getDimension(), this.pos));
                             if (PerWorldData.getConquestState(world.provider.getDimension()).equals(ConquestState.Contested)) {
                                 // This could loop, so we'll log it.
                                 while (!ConquestListener.getContestingFactions(world.provider.getDimension()).contains(race)) {
