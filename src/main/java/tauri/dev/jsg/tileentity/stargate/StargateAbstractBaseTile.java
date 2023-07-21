@@ -365,7 +365,7 @@ public abstract class StargateAbstractBaseTile extends TileEntity implements Sta
 
             boolean sourceInOrbit = world.provider.getDimension() != sourceProps.getId();
             boolean destInOrbit = targetGatePos.getTileEntity().world.provider.getDimension() != destProps.getId();
-            boolean sourceIsAbleToBypassRules = (world.provider.getDimension() <= -9000 || targetGatePos.getTileEntity().world.provider.getDimension() <= -9000);
+            boolean sourceIsAbleToBypassRules = (world.provider.getDimension() <= -1 || targetGatePos.getTileEntity().world.provider.getDimension() <= -1);
 
             int spaceDimId = zmaster587.advancedRocketry.api.ARConfiguration.getCurrentConfig().spaceDimId;
 
