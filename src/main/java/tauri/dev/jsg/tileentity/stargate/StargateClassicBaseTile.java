@@ -915,7 +915,7 @@ public abstract class StargateClassicBaseTile extends StargateAbstractBaseTile i
                             int posZ = this.getGateCenterPos().getZ();
                             Random r = new Random();
                             if (race == null) race = NpcRace.getRandomForGalaxy(com.stargatemc.constants.Galaxy.forDimensionId(world.provider.getDimension(), this.pos));
-                            if (PerWorldData.getConquestFaction(world.provider.getDimension()) != null && PerWorldData.getConquestFaction(world.provider.getDimension()).equals(NpcRace.CREW_OF_MIDWAY)) {
+                            if (race == null && PerWorldData.getConquestFaction(world.provider.getDimension()) != null && PerWorldData.getConquestFaction(world.provider.getDimension()).equals(NpcRace.CREW_OF_MIDWAY)) {
                                 int random = rand.nextInt(11);
                                 if (random < 7) {
                                     if (this.pos.getX() == 173 && this.pos.getY() == 165 && this.pos.getZ() ==368) {
