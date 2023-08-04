@@ -815,7 +815,7 @@ public abstract class StargateClassicBaseTile extends StargateAbstractBaseTile i
             if (config.getOption(ALLOW_RIG.id).getBooleanValue() && world.isAreaLoaded(pos, 10)) {
                 if (world.getTotalWorldTime() % 1200 == 0) { // every minute
                     int chanceToRandom = rand.nextInt(100);
-                    if (PerWorldData.getConquestState(world.provider.getDimension()).equals(ConquestState.Contested) || PerWorldData.getConquestFaction(world.provider.getDimension()).equals(NpcRace.CREW_OF_MIDWAY)) chanceToRandom -= 90;
+                    if (PerWorldData.getConquestState(world.provider.getDimension()).equals(ConquestState.Contested) || PerWorldData.getConquestFaction(world.provider.getDimension()) != null && PerWorldData.getConquestFaction(world.provider.getDimension()).equals(NpcRace.CREW_OF_MIDWAY)) chanceToRandom -= 90;
                     boolean isBigIncursion = (rand.nextFloat() > 0.8);
                     boolean isSmallIncursion = (rand.nextFloat() < 0.2);
                     int max = 4;
