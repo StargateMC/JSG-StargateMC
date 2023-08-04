@@ -243,6 +243,8 @@ public abstract class StargateClassicMergeHelper extends StargateAbstractMergeHe
         IBlockState state = world.getBlockState(checkPos);
 
         if (matchMember(state)) {
+            
+            JSG.logger.info("Locating member: " + checkPos.toString()  + " for: " + basePos.toString() + " passed!");
             StargateClassicMemberTile memberTile = (StargateClassicMemberTile) world.getTileEntity(checkPos);
 
             if ((shouldBeMerged && !memberTile.isMerged()) || (memberTile.isMerged() && memberTile.getBasePos().equals(basePos))) {
@@ -261,6 +263,8 @@ public abstract class StargateClassicMergeHelper extends StargateAbstractMergeHe
 
                 world.setBlockState(checkPos, state.withProperty(JSGProps.RENDER_BLOCK, !shouldBeMerged), 3);
             }
+        } else {
+            JSG.logger.info("Locating member: " + checkPos.toString()  + " for: " + basePos.toString() + " failed!");
         }
     }
 
