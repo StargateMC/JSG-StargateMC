@@ -94,6 +94,10 @@ public abstract class DHDAbstractTile extends TileEntity implements ILinkable, I
     private int linkId = -1;
     private BlockPos lastPos = BlockPos.ORIGIN;
 
+
+        public FluidTank getFluidHandler() {
+            return this.fluidHandler;
+        }
     // ---------------------------------------------------------------------------------------------------
     // Renderer state
 
@@ -489,6 +493,9 @@ public abstract class DHDAbstractTile extends TileEntity implements ILinkable, I
         return super.writeToNBT(compound);
     }
 
+    public ItemStackHandler getItemStackHandler() {
+        return this.itemStackHandler;
+    }
     @Override
     public void readFromNBT(@Nonnull NBTTagCompound compound) {
         super.readFromNBT(compound);
