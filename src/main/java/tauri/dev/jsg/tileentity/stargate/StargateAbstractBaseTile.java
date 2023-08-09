@@ -8,7 +8,8 @@ import com.stargatemc.constants.DevelopmentStage;
 import noppes.npcs.api.entity.ICustomNpc;
 import noppes.npcs.entity.EntityCustomNpc;
 import com.stargatemc.handlers.NpcHandler;
-
+import com.stargatemc.constants.WorldSecurity;
+import com.stargatemc.data.PerWorldData;
 import com.stargatemc.data.LocationData;
 
 import li.cil.oc.api.Network;
