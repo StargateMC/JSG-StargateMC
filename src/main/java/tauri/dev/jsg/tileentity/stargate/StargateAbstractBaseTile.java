@@ -9,6 +9,7 @@ import noppes.npcs.api.entity.ICustomNpc;
 import noppes.npcs.entity.EntityCustomNpc;
 import com.stargatemc.handlers.NpcHandler;
 
+import com.stargatemc.data.LocationData;
 
 import li.cil.oc.api.Network;
 import li.cil.oc.api.machine.Arguments;
@@ -1861,7 +1862,7 @@ public abstract class StargateAbstractBaseTile extends TileEntity implements Sta
             energyRequired.mul(JSGConfig.Stargate.power.nineSymbolAddressMul);
         if (dialedAddress.size() == 8)
             energyRequired.mul(JSGConfig.Stargate.power.eightSymbolAddressMul);
-
+        if (LocationData.isPositionProtected(this.world, this.pos)) energyRequired.cap(0); // No energy required to dial from a protected gate.
         //JSG.logger.info(String.format("Energy required to dial [distance=%,d, from=%s, to=%s] = %,d / keepAlive: %,d/t, stored=%,d", Math.round(distance), sourceDim, targetDim, energyRequired.energyToOpen, energyRequired.keepAlive, getEnergyStorage().getEnergyStored()));
 
         return energyRequired;
