@@ -513,7 +513,7 @@ public abstract class StargateAbstractBaseTile extends TileEntity implements Sta
 
         if (destProps == null || sourceProps == null) return 10; // This requires a gate dial 10 symbols in a scenario where it should not dial. Should fail 100% of the time. Scenarios this covers are FTL and unmappe dims.
         if (Galaxy.forDimProps(destProps).equals(Galaxy.forDimProps(sourceProps))) return 7;
-        if (LocationData.isProtected(this.world, this.pos) && PerWorldData.getWorldSecurity(this.world.provider.getDimension()).equals(WorldSecurity.LowSec)) return 10; // If the area is LowSec and protected and dialling between galaxies, fail it.
+        if (LocationData.isPositionProtected(this.world, this.pos) && PerWorldData.getWorldSecurity(this.world.provider.getDimension()).equals(WorldSecurity.LowSec)) return 10; // If the area is LowSec and protected and dialling between galaxies, fail it.
         if (Galaxy.forDimProps(destProps).equals(Galaxy.Destiny) || Galaxy.Destiny.equals(Galaxy.forDimProps(sourceProps))) return 9;
         if (Galaxy.forDimProps(destProps).equals(Galaxy.Alterran) || Galaxy.Alterran.equals(Galaxy.forDimProps(sourceProps))) return 9;
         if (Galaxy.forDimProps(destProps).equals(Galaxy.GalacticVoid) || Galaxy.GalacticVoid.equals(Galaxy.forDimProps(sourceProps))) return 9;
